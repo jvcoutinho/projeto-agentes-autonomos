@@ -1,4 +1,6 @@
 import sc2
+from sc2 import UnitTypeId
+
 from abstracts.Manager import Manager
 
 
@@ -12,7 +14,19 @@ class MilitaryManager(Manager):
         pass
 
     async def update(self, iteration: int):
-        await self.worker_kamikaze_attack()
+        # Training #
+        self.train_units_on_structure([UnitTypeId.STALKER, UnitTypeId.ZEALOT], UnitTypeId.GATEWAY)
+        self.train_units_on_structure([UnitTypeId.VOIDRAY], UnitTypeId.STARGATE)
+        self.train_units_on_structure([UnitTypeId.DARKTEMPLAR], UnitTypeId.DARKSHRINE)
+
+        # Combat #
+        pass
+
+    def train_units_on_structure(self, unit_type_ids, structure_type_id):
+        for unit_id in unit_type_ids:
+            for structure in self.agent.structures(structure_type_id).ready.idle:
+                if self.agent.can_afford(unit_id):
+                    structure.train(unit_id)
 
     async def worker_kamikaze_attack(self):
         """

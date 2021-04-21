@@ -42,7 +42,11 @@ class StructureManager(Manager):
         """
         Create an Assimilator whenever possible on a random Nexus, up until a limit.
         """
-        random_nexus = self.agent.townhalls.random
+        townhalls = self.agent.townhalls.ready
+        if not townhalls.exists:
+            return
+
+        random_nexus = self.agent.townhalls.ready.random
         close_vespene_geysers = self.agent.vespene_geyser.closer_than(15, random_nexus)
 
         for vespene_geyser in close_vespene_geysers:
@@ -57,12 +61,16 @@ class StructureManager(Manager):
         """
         Create a Pylon whenever the supply is low on a random Nexus, up until a limit.
         """
+        townhalls = self.agent.townhalls
+        if not townhalls.exists:
+            return
+
         if (
             self.agent.supply_left <= self.SUPPLY_THRESHOLD_FOR_PYLON
             and self.count_with_pending_structure(UnitTypeId.PYLON) < self.MAXIMUM_NUMBER_PYLONS
             and self.agent.can_afford(UnitTypeId.PYLON)
         ):
-            random_nexus = self.agent.townhalls.random
+            random_nexus = townhalls.random
             await self.agent.build(UnitTypeId.PYLON, near=random_nexus, placement_step=7)
 
     async def build_pylons_near_inactive_structures(self):
@@ -97,9 +105,9 @@ class StructureManager(Manager):
     async def build_structure_near_random_pylon(self, unit_type_id, limit: int):
         pylons = self.agent.structures(UnitTypeId.PYLON).ready
         if (
-                pylons.exists
-                and self.count_with_pending_structure(unit_type_id) < limit
-                and self.agent.can_afford(unit_type_id)
+            pylons.exists
+            and self.count_with_pending_structure(unit_type_id) < limit
+            and self.agent.can_afford(unit_type_id)
         ):
             await self.agent.build(unit_type_id, near=pylons.random)
 

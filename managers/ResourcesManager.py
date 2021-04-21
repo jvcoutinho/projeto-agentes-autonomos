@@ -21,7 +21,7 @@ class ResourcesManager(Manager):
         """
         Train probes on nexuses which are idle and missing workers
         """
-        for townhall in self.agent.townhalls.idle:
+        for townhall in self.agent.townhalls.ready.idle:
             if (
                 townhall.assigned_harvesters < townhall.ideal_harvesters
                 and self.agent.can_afford(UnitTypeId.PROBE)
