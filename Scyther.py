@@ -30,5 +30,5 @@ class Scyther(sc2.BotAI):
 
 run_game(maps.get("AcropolisLE"), [
     Bot(Race.Protoss, Scyther()),
-    Computer(Race.Zerg, Difficulty.Medium)
+    Computer(Race.Protoss, Difficulty.Medium)
 ], realtime=False)

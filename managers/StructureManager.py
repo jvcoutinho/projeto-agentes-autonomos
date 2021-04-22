@@ -25,14 +25,14 @@ class StructureManager(Manager):
         pass
 
     async def update(self, iteration: int):
-        await self.build_townhalls()
         await self.build_pylons()
-        await self.build_forge()
-        await self.build_gateway()
-        await self.build_cybernetics_core()
-        await self.build_stargate()
         await self.build_gas_buildings()
-        await self.build_photon_cannon()
+        await self.build_townhalls()
+        await self.build_forge()
+        await self.build_cybernetics_core()
+        await self.build_gateway()
+        await self.build_stargate()
+        # await self.build_photon_cannon()
         # await self.build_twilight_council()
         # await self.build_dark_shrine()
 
