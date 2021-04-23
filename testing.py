@@ -96,6 +96,19 @@ class ProtossBot(sc2.BotAI):
         self.advancedPylonsLocation.append(pylonPos)
         self.advancedPylonsLocation.append(secondaryPylonPos)
 
+    def generate_circle_edge(self, point, radius):
+        circleEdge = []
+
+        for angle in range(0, 330, 30):
+            x = point.x + (radius * math.cos((angle * math.pi) / 180))
+            y = point.y + (radius * math.sin((angle * math.pi) / 180))
+            
+            position = Point2((x, y))
+
+            circleEdge.append(position)
+
+        return circleEdge
+
     async def build_forges(self):
         if self.structures(UnitTypeId.PYLON).closer_than(1.0, self.advancedPylonsLocation[0]).ready:
             if self.structures(UnitTypeId.FORGE).amount < 1 and self.can_afford(UnitTypeId.FORGE) and not self.already_pending(UnitTypeId.FORGE):
@@ -106,10 +119,16 @@ class ProtossBot(sc2.BotAI):
     async def build_cannons(self):
         if self.structures(UnitTypeId.FORGE).ready.exists and self.structures(UnitTypeId.PHOTONCANNON).amount < self.MAXIMUM_NUMBER_CANNONS:
             if self.can_afford(UnitTypeId.PHOTONCANNON) and not self.already_pending(UnitTypeId.PHOTONCANNON):
-                if self.structures(UnitTypeId.PYLON).closer_than(1.0, self.advancedPylonsLocation[1]).ready:
-                    await self.build(UnitTypeId.PHOTONCANNON, near=self.advancedPylonsLocation[1], placement_step=2)
+                if self.structures(UnitTypeId.PYLON).closer_than(1.0, self.advancedPylonsLocation[1]).exists:
+                    possiblePositions = self.generate_circle_edge(self.advancedPylonsLocation[1], 6)
+                    possiblePositions = self.enemy_start_locations[0].sort_by_distance(possiblePositions)
+
+                    await self.build(UnitTypeId.PHOTONCANNON, near=self.advancedPylonsLocation[1], placement_step=1)
                 else:
-                    await self.build(UnitTypeId.PHOTONCANNON, near=self.advancedPylonsLocation[0], placement_step=2)
+                    possiblePositions = self.generate_circle_edge(self.advancedPylonsLocation[0], 5)
+                    possiblePositions = self.enemy_start_locations[0].sort_by_distance(possiblePositions)
+                    
+                    await self.build(UnitTypeId.PHOTONCANNON, near=possiblePositions[0], placement_step=1)
 
     async def attack(self):
         if self.structures(UnitTypeId.PHOTONCANNON).amount > 0 and len(self.enemy_units) > 0:
