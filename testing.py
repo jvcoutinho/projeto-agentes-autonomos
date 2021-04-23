@@ -29,6 +29,9 @@ class ProtossBot(sc2.BotAI):
         await self.build_pylons()
         await self.build_forges()
         await self.build_cannons()
+        await self.build_gas_buildings()
+        await self.build_army_root()
+        await self.build_stalkers()
         await self.attack()
 
     async def distribute(self):
@@ -41,6 +44,19 @@ class ProtossBot(sc2.BotAI):
         for nexus in self.structures(UnitTypeId.NEXUS).ready.idle:
             if self.can_afford(UnitTypeId.PROBE) and number_assigned_harvesters < ideal_number_harvesters:
                 nexus.train(UnitTypeId.PROBE)
+
+    async def build_gas_buildings(self):
+        baseNexus = self.townhalls.first
+
+        close_vespene_geysers = self.vespene_geyser.closer_than(15, baseNexus)
+
+        if self.structures(UnitTypeId.ASSIMILATOR).amount < 2:
+            for vespene_geyser in close_vespene_geysers:
+                if (
+                    self.can_afford(UnitTypeId.ASSIMILATOR)
+                    and not self.gas_buildings.closer_than(1, vespene_geyser).exists
+                ):
+                    await self.build(UnitTypeId.ASSIMILATOR, max_distance=1, near=vespene_geyser)
 
     async def build_pylons(self):
         if self.supply_left < 5 and not self.already_pending(UnitTypeId.PYLON):
@@ -55,6 +71,8 @@ class ProtossBot(sc2.BotAI):
                         else:
                             self.MAXIMUM_NUMBER_CANNONS += 3
                             await self.build(UnitTypeId.PYLON, near=self.advancedPylonsLocation[1], placement_step=1)
+                    else:
+                        await self.build(UnitTypeId.PYLON, near=self.townhalls.first)
 
     async def expand(self):
         if self.structures(UnitTypeId.NEXUS).amount < 3 and self.can_afford(UnitTypeId.NEXUS) and not self.already_pending(UnitTypeId.NEXUS):
@@ -131,9 +149,30 @@ class ProtossBot(sc2.BotAI):
                     await self.build(UnitTypeId.PHOTONCANNON, near=possiblePositions[0], placement_step=1)
 
     async def attack(self):
+        if self.units(UnitTypeId.STALKER).amount > 5:
+            for stalker in self.units(UnitTypeId.STALKER).idle:
+                stalker.attack(self.enemy_start_locations[0])
+        
         if self.structures(UnitTypeId.PHOTONCANNON).amount > 0 and len(self.enemy_units) > 0:
             for pc in self.structures(UnitTypeId.PHOTONCANNON).idle:
                 pc.attack(self.enemy_units.random)
+
+    async def build_army_root(self):
+        if self.structures(UnitTypeId.GATEWAY).amount < 2 and self.structures(UnitTypeId.PYLON).ready:
+            if self.can_afford(UnitTypeId.GATEWAY) and not self.already_pending(UnitTypeId.GATEWAY):
+                location = Point2(((self.deffenseLineLocation.x + self.advancedPylonsLocation[0].x) / 2, self.advancedPylonsLocation[0].y))
+
+                await self.build(UnitTypeId.GATEWAY, near=location)
+        elif self.structures(UnitTypeId.GATEWAY).ready:
+            if not self.structures(UnitTypeId.CYBERNETICSCORE).exists and self.can_afford(UnitTypeId.CYBERNETICSCORE):
+                gateway = self.structures(UnitTypeId.GATEWAY).ready.first
+                
+                await self.build(UnitTypeId.CYBERNETICSCORE, near=gateway)
+
+    async def build_stalkers(self):
+        for gateway in self.structures(UnitTypeId.GATEWAY).ready.idle:
+            if self.can_afford(UnitTypeId.STALKER):
+                gateway.train(UnitTypeId.STALKER)
 
     def count_harvesters(self):
         ideal = 0
