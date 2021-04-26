@@ -25,8 +25,9 @@ class MilitaryManager(Manager):
 
     async def update(self, iteration: int):
         # Training #
-        self.train_units_on_structure([UnitTypeId.DARKTEMPLAR, UnitTypeId.STALKER, UnitTypeId.SENTRY, UnitTypeId.ZEALOT], UnitTypeId.GATEWAY)
+        self.train_units_on_structure([UnitTypeId.DARKTEMPLAR, UnitTypeId.STALKER,UnitTypeId.OBSERVER, UnitTypeId.SENTRY, UnitTypeId.ZEALOT], UnitTypeId.GATEWAY)
         self.train_units_on_structure([UnitTypeId.VOIDRAY], UnitTypeId.STARGATE)
+        self.train_units_on_structure([UnitTypeId.OBSERVER], UnitTypeId.ROBOTICSFACILITY)
 
         # Combat #
         self.defend_base()
@@ -82,7 +83,8 @@ class MilitaryManager(Manager):
             self.agent.units(UnitTypeId.ZEALOT) |
             self.agent.units(UnitTypeId.DARKTEMPLAR) |
             self.agent.units(UnitTypeId.STALKER) |
-            self.agent.units(UnitTypeId.SENTRY)
+            self.agent.units(UnitTypeId.SENTRY) |
+            self.agent.units(UnitTypeId.OBSERVER)
         )
 
     def get_enemies(self) -> Units:
