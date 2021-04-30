@@ -1,5 +1,5 @@
 import sc2
-from sc2 import UnitTypeId
+from sc2 import UnitTypeId, AbilityId
 
 from abstracts.Manager import Manager
 
@@ -16,6 +16,7 @@ class ResourcesManager(Manager):
     async def update(self, iteration: int):
         await self.train_workers()
         await self.distribute_workers()
+        await self.use_chrono_boost()
 
     async def train_workers(self):
         """
@@ -28,9 +29,23 @@ class ResourcesManager(Manager):
             ):
                 townhall.train(UnitTypeId.PROBE)
 
+
     async def distribute_workers(self):
         """
         Distribute workers if some are idle
         """
         if self.agent.idle_worker_count > 0:
             await self.agent.distribute_workers()
+
+
+    async def use_chrono_boost(self):
+        """
+        Uses Chrono Boost to enhance worker creation.
+        """
+        for townhall in self.agent.townhalls.ready:
+            if (
+                not townhall.is_idle
+                and await self.agent.can_cast(townhall, AbilityId.EFFECT_CHRONOBOOST)
+                and not townhall.is_using_ability(AbilityId.EFFECT_CHRONOBOOST)
+            ):
+                townhall(AbilityId.EFFECT_CHRONOBOOST)

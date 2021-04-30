@@ -1,28 +1,52 @@
 import sc2
 from sc2 import UnitTypeId
+from sc2.unit import Unit
 
 from abstracts.Manager import Manager
 
 
 # Define criação e funcionamento de estruturas
 class StructureManager(Manager):
-    MAXIMUM_NUMBER_TOWNHALLS = 6
-    MAXIMUM_NUMBER_ASSIMILATORS = 3
-    MAXIMUM_NUMBER_PYLONS = 10
-    MAXIMUM_NUMBER_FORGES = 2
-    MAXIMUM_NUMBER_GATEWAYS = 2
+    MAXIMUM_NUMBER_TOWNHALLS = 4
+    MAXIMUM_NUMBER_ASSIMILATORS = 1
+    MAXIMUM_NUMBER_PYLONS = 5
+    MAXIMUM_NUMBER_FORGES = 1
+    MAXIMUM_NUMBER_GATEWAYS = 0
     MAXIMUM_NUMBER_CYBERNETICSCORE = 1
-    MAXIMUM_NUMBER_STARGATES = 1
-    MAXIMUM_NUMBER_PHOTON_CANNONS = 5
+    MAXIMUM_NUMBER_STARGATES = 0
+    MAXIMUM_NUMBER_PHOTON_CANNONS = 0
     MAXIMUM_NUMBER_TWILIGHT_COUNCILS = 1
     MAXIMUM_NUMBER_DARK_SHRINES = 1
     SUPPLY_THRESHOLD_FOR_PYLON = 5
 
+
     def __init__(self, agent: sc2.BotAI):
         super().__init__(agent)
 
+
     async def start(self):
         pass
+
+
+    async def on_structure_built(self, unit: Unit):
+        if unit.type_id == UnitTypeId.NEXUS:
+            self.MAXIMUM_NUMBER_GATEWAYS += 2
+            self.MAXIMUM_NUMBER_PYLONS += 5
+            self.MAXIMUM_NUMBER_ASSIMILATORS += 2
+            self.MAXIMUM_NUMBER_STARGATES += 1
+            self.MAXIMUM_NUMBER_FORGES = 2
+            if self.agent.structures(UnitTypeId.NEXUS).ready.amount > 2:
+                self.MAXIMUM_NUMBER_PHOTON_CANNONS += 1
+
+
+    async def on_structure_destroyed(self, unit_tag: int):
+        if unit_tag == UnitTypeId.NEXUS:
+            self.MAXIMUM_NUMBER_GATEWAYS -= 2
+            self.MAXIMUM_NUMBER_PYLONS -= 5
+            self.MAXIMUM_NUMBER_ASSIMILATORS -= 2
+            self.MAXIMUM_NUMBER_STARGATES -= 2
+            self.MAXIMUM_NUMBER_FORGES = 1
+
 
     async def update(self, iteration: int):
         await self.build_pylons()
@@ -32,9 +56,11 @@ class StructureManager(Manager):
         await self.build_cybernetics_core()
         await self.build_gateway()
         await self.build_stargate()
-        # await self.build_photon_cannon()
+        await self.build_photon_cannon()
+        await self.make_researches()
         # await self.build_twilight_council()
         # await self.build_dark_shrine()
+
 
     async def build_townhalls(self):
         """
@@ -45,6 +71,7 @@ class StructureManager(Manager):
             and self.agent.can_afford(UnitTypeId.NEXUS)
         ):
             await self.agent.expand_now()
+
 
     async def build_gas_buildings(self):
         """
@@ -65,6 +92,7 @@ class StructureManager(Manager):
             ):
                 await self.agent.build(UnitTypeId.ASSIMILATOR, max_distance=1, near=vespene_geyser)
 
+
     async def build_pylons(self):
         """
         Create a Pylon whenever the supply is low on a random Nexus, up until a limit.
@@ -81,11 +109,13 @@ class StructureManager(Manager):
             random_nexus = townhalls.random
             await self.agent.build(UnitTypeId.PYLON, near=random_nexus, placement_step=7)
 
+
     async def build_pylons_near_inactive_structures(self):
         """
         Create a Pylon whenever a structure goes inactive (a Pylon near got destroyed, for example).
         """
         pass
+
 
     async def build_forge(self):
         """
@@ -93,11 +123,13 @@ class StructureManager(Manager):
         """
         await self.build_structure_near_random_pylon(UnitTypeId.FORGE, self.MAXIMUM_NUMBER_FORGES)
 
+
     async def build_gateway(self):
         """
         Create a Gateway whenever possible near a random Pylon, up until a limit.
         """
         await self.build_structure_near_random_pylon(UnitTypeId.GATEWAY, self.MAXIMUM_NUMBER_GATEWAYS)
+
 
     async def build_cybernetics_core(self):
         """
@@ -110,11 +142,13 @@ class StructureManager(Manager):
             await self.build_structure_near_random_pylon(UnitTypeId.CYBERNETICSCORE,
                                                          self.MAXIMUM_NUMBER_CYBERNETICSCORE)
 
+
     async def build_stargate(self):
         """
         Create a Stargate whenever possible near a random Pylon, up until a limit.
         """
         await self.build_structure_near_random_pylon(UnitTypeId.STARGATE, self.MAXIMUM_NUMBER_STARGATES)
+
 
     async def build_twilight_council(self):
         """
@@ -122,17 +156,24 @@ class StructureManager(Manager):
         """
         await self.build_structure_near_random_pylon(UnitTypeId.TWILIGHTCOUNCIL, self.MAXIMUM_NUMBER_TWILIGHT_COUNCILS)
 
+
     async def build_dark_shrine(self):
         """
         Create a Dark Shrine whenever possible near a random Pylon, up until a limit.
         """
         await self.build_structure_near_random_pylon(UnitTypeId.DARKSHRINE, self.MAXIMUM_NUMBER_DARK_SHRINES)
 
+
     async def build_photon_cannon(self):
         """
         Create a Photon Cannon whenever possible near a random Pylon, up until a limit.
         """
         await self.build_structure_near_random_pylon(UnitTypeId.PHOTONCANNON, self.MAXIMUM_NUMBER_PHOTON_CANNONS)
+
+
+    async def make_researches(self):
+        pass
+
 
     async def build_structure_near_random_pylon(self, unit_type_id, limit: int, placement_step: int = 2):
         pylons = self.agent.structures(UnitTypeId.PYLON).ready
@@ -143,7 +184,6 @@ class StructureManager(Manager):
         ):
             await self.agent.build(unit_type_id, near=pylons.random, placement_step=placement_step)
 
+
     def count_with_pending_structure(self, unit_type_id) -> int:
         return self.agent.structures(unit_type_id).amount + self.agent.already_pending(unit_type_id)
-
-

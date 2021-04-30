@@ -1,6 +1,7 @@
 import sc2
 from sc2 import Difficulty, Race, maps, run_game
 from sc2.player import Bot, Computer
+from sc2.unit import Unit
 
 from managers.MilitaryManager import MilitaryManager
 from managers.ResourcesManager import ResourcesManager
@@ -19,16 +20,28 @@ class Scyther(sc2.BotAI):
             MilitaryManager(self)
         ]
 
+
     async def on_start(self):
         for manager in self.managers:
             await manager.start()
+
 
     async def on_step(self, iteration: int):
         for manager in self.managers:
             await manager.update(iteration)
 
 
+    async def on_building_construction_complete(self, unit: Unit):
+        for manager in self.managers:
+            await manager.on_structure_built(unit)
+
+
+    async def on_unit_destroyed(self, unit_tag: int):
+        for manager in self.managers:
+            await manager.on_structure_destroyed(unit_tag)
+
+
 run_game(maps.get("AcropolisLE"), [
     Bot(Race.Protoss, Scyther()),
-    Computer(Race.Protoss, Difficulty.Medium)
+    Computer(Race.Zerg, Difficulty.Hard)
 ], realtime=False)

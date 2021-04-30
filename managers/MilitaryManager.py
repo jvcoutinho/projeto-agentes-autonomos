@@ -11,26 +11,38 @@ from abstracts.Manager import Manager
 
 # Define estratégias de combate
 class MilitaryManager(Manager):
-
     DEFEND_THRESHOLD = 0.6
-    COMBATENTS_PUSH_THRESHOLD = 16
+    COMBATENTS_PUSH_THRESHOLD = 25
     COMBATENTS_SHIELD_THRESHOLD = 0.3
     COMBATENTS_HEALTH_THRESHOLD = 0.6
+    COMBATENT_ABILITY_CAST_RANGE = 10
+
+    MAXIMUM_NUMBER_SENTRIES = 3
+
 
     def __init__(self, agent: sc2.BotAI):
         super().__init__(agent)
+        self.abilities = [
+            (UnitTypeId.STALKER, AbilityId.EFFECT_BLINK_STALKER),
+            (UnitTypeId.VOIDRAY, AbilityId.EFFECT_VOIDRAYPRISMATICALIGNMENT),
+            (UnitTypeId.SENTRY, AbilityId.GUARDIANSHIELD_GUARDIANSHIELD)
+        ]
+
 
     async def start(self):
         pass
 
+
     async def update(self, iteration: int):
         # Training #
-        self.train_units_on_structure([UnitTypeId.DARKTEMPLAR, UnitTypeId.STALKER, UnitTypeId.SENTRY, UnitTypeId.ZEALOT], UnitTypeId.GATEWAY)
+        self.train_units_on_structure(
+            [UnitTypeId.DARKTEMPLAR, UnitTypeId.STALKER, UnitTypeId.ZEALOT, UnitTypeId.SENTRY], UnitTypeId.GATEWAY)
         self.train_units_on_structure([UnitTypeId.VOIDRAY], UnitTypeId.STARGATE)
 
         # Combat #
         self.defend_base()
-        self.attack_procedure()
+        await self.attack_procedure()
+
 
     def train_units_on_structure(self, unit_type_ids, structure_type_id):
         """
@@ -38,9 +50,14 @@ class MilitaryManager(Manager):
         resources, units at the start of the array should be more costly.
         """
         for unit_id in unit_type_ids:
+            if unit_id == UnitTypeId.SENTRY and self.agent.units(
+                UnitTypeId.SENTRY).amount >= self.MAXIMUM_NUMBER_SENTRIES:
+                continue
+
             for structure in self.agent.structures(structure_type_id).ready.idle:
                 if self.agent.can_afford(unit_id):
                     structure.train(unit_id)
+
 
     def defend_base(self):
         """
@@ -56,44 +73,52 @@ class MilitaryManager(Manager):
                 for combatent in close_combatents:
                     combatent.attack(close_enemies.closest_to(combatent))
 
-    def attack_procedure(self):
+
+    async def attack_procedure(self):
         """
         If the army contains a certain number, then make a push to the enemy base.
         Retreat whenever too damaged; attack units first; attack structures last.
         """
-        combatents = self.get_combatents().idle
-
-        if combatents.amount < self.COMBATENTS_PUSH_THRESHOLD:
-            return
+        combatents = self.get_combatents()
 
         for combatent in combatents:
             if self.is_healthy(combatent):
-                target = self.get_attack_target(combatent)
-                self.use_abilities(combatent, target)
-                combatent.attack(target)
+                target = self.get_attack_target(combatent, combatents.amount)
+                if target is not None:
+                    combatent.attack(target)
+                    await self.use_abilities(combatent, target)
             else:
                 pylons = self.agent.structures(UnitTypeId.PYLON).ready
                 if pylons.exists:
-                    combatent.move(pylons.closest_to(combatent))
+                    combatent.attack(pylons.closest_to(combatent))
+
 
     def get_combatents(self) -> Units:
         return (
-            self.agent.units(UnitTypeId.VOIDRAY) |
-            self.agent.units(UnitTypeId.ZEALOT) |
-            self.agent.units(UnitTypeId.DARKTEMPLAR) |
-            self.agent.units(UnitTypeId.STALKER) |
+            self.agent.units(UnitTypeId.VOIDRAY) +
+            self.agent.units(UnitTypeId.ZEALOT) +
+            self.agent.units(UnitTypeId.DARKTEMPLAR) +
+            self.agent.units(UnitTypeId.STALKER) +
             self.agent.units(UnitTypeId.SENTRY)
         )
 
-    def get_enemies(self) -> Units:
-        return (self.agent.enemy_units | self.agent.enemy_structures).filter(lambda t: t.can_be_attacked)
 
-    def get_attack_target(self, combatent: Unit) -> Union[Unit, Point2]:
-        if self.agent.enemy_units.exists:
-            return self.agent.enemy_units.closest_to(combatent)
-        if self.agent.enemy_structures.exists:
-            return self.agent.enemy_structures.random
-        return self.agent.enemy_start_locations[0]
+    def get_enemies(self) -> Units:
+        return (self.agent.enemy_units + self.agent.enemy_structures).filter(lambda unit: unit.can_be_attacked)
+
+
+    def get_attack_target(self, combatent: Unit, amount_combatents: int) -> Union[Unit, Point2, None]:
+        enemy_units = self.agent.enemy_units.filter(lambda unit: unit.can_be_attacked)
+        enemy_structures = self.agent.enemy_structures.filter(lambda unit: unit.can_be_attacked)
+
+        if enemy_units.exists:
+            return enemy_units.closest_to(combatent)
+        if enemy_structures.exists:
+            return enemy_structures.closest_to(combatent)
+        if amount_combatents >= self.COMBATENTS_PUSH_THRESHOLD:
+            return self.agent.enemy_start_locations[0]
+        return None
+
 
     def is_healthy(self, combatent: Unit) -> bool:
         return (
@@ -101,16 +126,13 @@ class MilitaryManager(Manager):
             or combatent.health_percentage >= self.COMBATENTS_HEALTH_THRESHOLD
         )
 
-    def use_abilities(self, combatent: Unit, target: Unit):
-        if combatent.type_id == UnitTypeId.STALKER and combatent.in_ability_cast_range(AbilityId.EFFECT_BLINK_STALKER, target):
-            combatent(AbilityId.EFFECT_BLINK_STALKER, target)
 
-        if target.distance_to(combatent) < 10:
-            if combatent.type_id == UnitTypeId.VOIDRAY:
-                combatent(AbilityId.EFFECT_VOIDRAYPRISMATICALIGNMENT)
-
-            if combatent.type_id == UnitTypeId.SENTRY:
-                combatent(AbilityId.GUARDIANSHIELD_GUARDIANSHIELD)
-
-
-
+    async def use_abilities(self, combatent: Unit, target: Unit):
+        for (unit, ability) in self.abilities:
+            if (
+                unit == combatent.type_id
+                and await self.agent.can_cast(combatent, ability)
+                and not combatent.is_using_ability(ability)
+                and combatent.distance_to_squared(target) <= self.COMBATENT_ABILITY_CAST_RANGE
+            ):
+                combatent(ability)
