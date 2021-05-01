@@ -25,7 +25,7 @@ class Scyther(sc2.BotAI):
         for manager in self.managers:
             try:
                 await manager.start()
-            except AttributeError:
+            except:
                 pass
 
 
@@ -33,7 +33,7 @@ class Scyther(sc2.BotAI):
         for manager in self.managers:
             try:
                 await manager.update(iteration)
-            except AttributeError:
+            except:
                 pass
 
 
@@ -41,7 +41,7 @@ class Scyther(sc2.BotAI):
         for manager in self.managers:
             try:
                 await manager.on_structure_built(unit)
-            except AttributeError:
+            except:
                 pass
 
 
@@ -49,11 +49,11 @@ class Scyther(sc2.BotAI):
         for manager in self.managers:
             try:
                 await manager.on_structure_destroyed(unit_tag)
-            except AttributeError:
+            except:
                 pass
 
 
 run_game(maps.get("AcropolisLE"), [
     Bot(Race.Protoss, Scyther()),
-    Computer(Race.Terran, Difficulty.Hard)
+    Computer(Race.Zerg, Difficulty.Hard)
 ], realtime=False)
