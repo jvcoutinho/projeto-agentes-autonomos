@@ -12,14 +12,15 @@ from abstracts.Manager import Manager
 # Define estratégias de combate
 class MilitaryManager(Manager):
     DEFEND_THRESHOLD = 0.6
-    COMBATENTS_PUSH_THRESHOLD = 35
-    VOIDRAY_PUSH_THRESHOLD = 4
+    COMBATENTS_PUSH_WITH_VOIDRAY_THRESHOLD = 15
+    COMBATENTS_PUSH_WITHOUT_VOIDRAY_THRESHOLD = 30
+    VOIDRAY_PUSH_THRESHOLD = 3
     COMBATENTS_SHIELD_THRESHOLD = 0.3
     COMBATENTS_HEALTH_THRESHOLD = 0.6
     COMBATENT_ABILITY_CAST_RANGE = 20
 
-    MAXIMUM_NUMBER_SENTRIES = 4
-    MAXIMUM_NUMBER_OBSERVERS = 1
+    MAXIMUM_NUMBER_SENTRIES = 1000
+    MAXIMUM_NUMBER_OBSERVERS = 2
 
 
     def __init__(self, agent: sc2.BotAI):
@@ -37,9 +38,9 @@ class MilitaryManager(Manager):
 
     async def update(self, iteration: int):
         # Training #
+        self.train_units_on_structure([UnitTypeId.TEMPEST, UnitTypeId.VOIDRAY], UnitTypeId.STARGATE)
         self.train_units_on_structure(
             [UnitTypeId.DARKTEMPLAR, UnitTypeId.STALKER, UnitTypeId.SENTRY, UnitTypeId.ZEALOT], UnitTypeId.GATEWAY)
-        self.train_units_on_structure([UnitTypeId.TEMPEST, UnitTypeId.VOIDRAY], UnitTypeId.STARGATE)
         self.train_units_on_structure([UnitTypeId.OBSERVER], UnitTypeId.ROBOTICSFACILITY)
 
         # Combat #
@@ -88,8 +89,7 @@ class MilitaryManager(Manager):
         """
         combatents = self.get_combatents()
 
-        if combatents.amount < self.COMBATENTS_PUSH_THRESHOLD or self.agent.units(
-            UnitTypeId.VOIDRAY).amount < self.VOIDRAY_PUSH_THRESHOLD:
+        if not self.is_sufficient_amount(combatents.amount):
             return
 
         for combatent in combatents:
@@ -97,11 +97,12 @@ class MilitaryManager(Manager):
                 target = self.get_attack_target(combatent, combatents.amount)
                 if target is not None:
                     combatent.attack(target)
-                    await self.use_abilities(combatent, target)
+                    if self.agent.enemy_units.closer_than(10, combatent):
+                        await self.use_abilities(combatent, target)
             else:
                 pylons = self.agent.structures(UnitTypeId.PYLON).ready
                 if pylons.exists:
-                    combatent.attack(pylons.closest_to(combatent))
+                    combatent.patrol(pylons.closest_to(combatent))
 
 
     def get_combatents(self) -> Units:
@@ -120,7 +121,7 @@ class MilitaryManager(Manager):
 
 
     def get_attack_target(self, combatent: Unit, amount_combatents: int) -> Union[Unit, Point2, None]:
-        enemy_units = self.agent.enemy_units.filter(lambda unit: unit.can_be_attacked)
+        enemy_units = self.agent.enemy_units.closer_than(30, combatent).filter(lambda unit: unit.can_be_attacked)
         enemy_structures = self.agent.enemy_structures.filter(lambda unit: unit.can_be_attacked)
 
         if enemy_units.exists:
@@ -143,6 +144,17 @@ class MilitaryManager(Manager):
                 unit == combatent.type_id
                 and await self.agent.can_cast(combatent, ability)
                 and not combatent.is_using_ability(ability)
-                and combatent.distance_to_squared(target) <= self.COMBATENT_ABILITY_CAST_RANGE
             ):
-                combatent(ability)
+                if combatent.type_id == UnitTypeId.STALKER:
+                    combatent(ability, target)
+                else:
+                    combatent(ability)
+
+
+    def is_sufficient_amount(self, amount: int):
+        number_voidrays = self.agent.units(UnitTypeId.VOIDRAY).ready.amount
+
+        if number_voidrays >= self.VOIDRAY_PUSH_THRESHOLD:
+            return amount >= self.COMBATENTS_PUSH_WITH_VOIDRAY_THRESHOLD
+
+        return amount >= self.COMBATENTS_PUSH_WITHOUT_VOIDRAY_THRESHOLD

@@ -43,9 +43,12 @@ class ResourcesManager(Manager):
         Uses Chrono Boost to enhance worker creation.
         """
         for townhall in self.agent.townhalls.ready:
-            if (
-                not townhall.is_idle
-                and await self.agent.can_cast(townhall, AbilityId.EFFECT_CHRONOBOOST)
-                and not townhall.is_using_ability(AbilityId.EFFECT_CHRONOBOOST)
-            ):
-                townhall(AbilityId.EFFECT_CHRONOBOOST)
+            gateways = self.agent.structures(UnitTypeId.GATEWAY).closer_than(20, townhall).ready
+            if gateways.exists:
+                random_gateway = gateways.random
+                if (
+                    not townhall.is_idle
+                    and await self.agent.can_cast(townhall, AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, random_gateway)
+                    and not townhall.is_using_ability(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST)
+                ):
+                    townhall(AbilityId.EFFECT_CHRONOBOOSTENERGYCOST, target=random_gateway)
