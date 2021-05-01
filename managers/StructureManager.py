@@ -17,6 +17,7 @@ class StructureManager(Manager):
     MAXIMUM_NUMBER_PHOTON_CANNONS = 0
     MAXIMUM_NUMBER_TWILIGHT_COUNCILS = 1
     MAXIMUM_NUMBER_DARK_SHRINES = 1
+    MAXIMUM_NUMBER_ROBOTICS_FACILITY = 1
     SUPPLY_THRESHOLD_FOR_PYLON = 5
 
 
@@ -58,6 +59,7 @@ class StructureManager(Manager):
         await self.build_stargate()
         await self.build_photon_cannon()
         await self.make_researches()
+        await self.build_robotic_facility()
         # await self.build_twilight_council()
         # await self.build_dark_shrine()
 
@@ -129,6 +131,12 @@ class StructureManager(Manager):
         Create a Gateway whenever possible near a random Pylon, up until a limit.
         """
         await self.build_structure_near_random_pylon(UnitTypeId.GATEWAY, self.MAXIMUM_NUMBER_GATEWAYS)
+
+    async def build_robotic_facility(self):
+        """
+        Create a ROBOTICSFACILITY whenever possible near a random Pylon, up until a limit.
+        """
+        await self.build_structure_near_random_pylon(UnitTypeId.ROBOTICSFACILITY, self.MAXIMUM_NUMBER_ROBOTICS_FACILITY)
 
 
     async def build_cybernetics_core(self):
