@@ -12,12 +12,14 @@ from abstracts.Manager import Manager
 # Define estratégias de combate
 class MilitaryManager(Manager):
     DEFEND_THRESHOLD = 0.6
-    COMBATENTS_PUSH_THRESHOLD = 25
+    COMBATENTS_PUSH_THRESHOLD = 35
+    VOIDRAY_PUSH_THRESHOLD = 4
     COMBATENTS_SHIELD_THRESHOLD = 0.3
     COMBATENTS_HEALTH_THRESHOLD = 0.6
-    COMBATENT_ABILITY_CAST_RANGE = 10
+    COMBATENT_ABILITY_CAST_RANGE = 20
 
-    MAXIMUM_NUMBER_SENTRIES = 3
+    MAXIMUM_NUMBER_SENTRIES = 4
+    MAXIMUM_NUMBER_OBSERVERS = 1
 
 
     def __init__(self, agent: sc2.BotAI):
@@ -35,8 +37,9 @@ class MilitaryManager(Manager):
 
     async def update(self, iteration: int):
         # Training #
-        self.train_units_on_structure([UnitTypeId.DARKTEMPLAR, UnitTypeId.STALKER,UnitTypeId.OBSERVER, UnitTypeId.SENTRY, UnitTypeId.ZEALOT], UnitTypeId.GATEWAY)
-        self.train_units_on_structure([UnitTypeId.VOIDRAY], UnitTypeId.STARGATE)
+        self.train_units_on_structure(
+            [UnitTypeId.DARKTEMPLAR, UnitTypeId.STALKER, UnitTypeId.SENTRY, UnitTypeId.ZEALOT], UnitTypeId.GATEWAY)
+        self.train_units_on_structure([UnitTypeId.TEMPEST, UnitTypeId.VOIDRAY], UnitTypeId.STARGATE)
         self.train_units_on_structure([UnitTypeId.OBSERVER], UnitTypeId.ROBOTICSFACILITY)
 
         # Combat #
@@ -50,8 +53,12 @@ class MilitaryManager(Manager):
         resources, units at the start of the array should be more costly.
         """
         for unit_id in unit_type_ids:
-            if unit_id == UnitTypeId.SENTRY and self.agent.units(
-                UnitTypeId.SENTRY).amount >= self.MAXIMUM_NUMBER_SENTRIES:
+            if (
+                (unit_id == UnitTypeId.SENTRY and self.agent.units(
+                    UnitTypeId.SENTRY).amount >= self.MAXIMUM_NUMBER_SENTRIES)
+                or (unit_id == UnitTypeId.OBSERVER and self.agent.units(
+                UnitTypeId.OBSERVER).amount >= self.MAXIMUM_NUMBER_OBSERVERS)
+            ):
                 continue
 
             for structure in self.agent.structures(structure_type_id).ready.idle:
@@ -81,6 +88,10 @@ class MilitaryManager(Manager):
         """
         combatents = self.get_combatents()
 
+        if combatents.amount < self.COMBATENTS_PUSH_THRESHOLD or self.agent.units(
+            UnitTypeId.VOIDRAY).amount < self.VOIDRAY_PUSH_THRESHOLD:
+            return
+
         for combatent in combatents:
             if self.is_healthy(combatent):
                 target = self.get_attack_target(combatent, combatents.amount)
@@ -100,7 +111,7 @@ class MilitaryManager(Manager):
             self.agent.units(UnitTypeId.DARKTEMPLAR) +
             self.agent.units(UnitTypeId.STALKER) +
             self.agent.units(UnitTypeId.SENTRY) +
-            self.agent.units(UnitTypeId.OBSERVER)
+            self.agent.units(UnitTypeId.TEMPEST)
         )
 
 
@@ -116,9 +127,7 @@ class MilitaryManager(Manager):
             return enemy_units.closest_to(combatent)
         if enemy_structures.exists:
             return enemy_structures.closest_to(combatent)
-        if amount_combatents >= self.COMBATENTS_PUSH_THRESHOLD:
-            return self.agent.enemy_start_locations[0]
-        return None
+        return self.agent.enemy_start_locations[0]
 
 
     def is_healthy(self, combatent: Unit) -> bool:

@@ -1,19 +1,17 @@
-from abstracts.Manager import Manager
-from typing import Union
-import sc2
-from sc2 import UnitTypeId, AbilityId, position, maps
-from sc2.units import Units
 import random
-import queue 
-from sc2.position import Point2
+
+import sc2
+from sc2 import UnitTypeId
+from sc2.units import Units
+
+from abstracts.Manager import Manager
 
 
 # Define estratégias de scouting
 class ScoutingManager(Manager):
-
     CURRENTY_ROUTE = True
     probobservers = []
-    haveobservers = False
+    haveobservers = True
     route = []
 
     def __init__(self, agent: sc2.BotAI):
@@ -59,7 +57,7 @@ class ScoutingManager(Manager):
                             self.probobservers[0].patrol(x, queue = True)
 
         if(len(observer) > 0 ):
-            self.haveobservers = True
+            # self.haveobservers = True
             observer = observer[0]
             y = random.randint(0,len(self.route)-1)
             for x in self.route[y]:
