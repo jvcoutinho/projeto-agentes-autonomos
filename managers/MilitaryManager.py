@@ -121,7 +121,7 @@ class MilitaryManager(Manager):
 
 
     def get_attack_target(self, combatent: Unit, amount_combatents: int) -> Union[Unit, Point2, None]:
-        enemy_units = self.agent.enemy_units.closer_than(30, combatent).filter(lambda unit: unit.can_be_attacked)
+        enemy_units = self.agent.enemy_units.closer_than(50, combatent).filter(lambda unit: unit.can_be_attacked)
         enemy_structures = self.agent.enemy_structures.filter(lambda unit: unit.can_be_attacked)
 
         if enemy_units.exists:

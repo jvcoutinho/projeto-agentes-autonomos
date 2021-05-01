@@ -68,14 +68,13 @@ class StructureManager(Manager):
             self.MAXIMUM_NUMBER_ASSIMILATORS = 2
             self.MAXIMUM_NUMBER_GATEWAYS = 2
             self.MAXIMUM_NUMBER_STARGATES = 1
-            self.MAXIMUM_NUMBER_PHOTON_CANNONS = 3
 
         elif number_townhalls == 3:
             self.CAN_RESEARCH = True
             self.MAXIMUM_NUMBER_PYLONS = 30
             self.MAXIMUM_NUMBER_GATEWAYS = 3
             self.MAXIMUM_NUMBER_ASSIMILATORS = 5
-            self.MAXIMUM_NUMBER_STARGATES = 3
+            self.MAXIMUM_NUMBER_STARGATES = 2
             self.MAXIMUM_NUMBER_ROBOTICS_FACILITY = 1
             self.MAXIMUM_NUMBER_PHOTON_CANNONS = 6
 
