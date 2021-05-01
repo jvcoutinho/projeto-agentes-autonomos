@@ -37,6 +37,9 @@ class StructureManager(Manager):
 
     async def on_structure_built(self, unit: Unit):
         if unit.type_id == UnitTypeId.NEXUS:
+            if self.agent.townhalls.ready.amount == 1:
+                await self.agent.chat_send("HEISHI YO IKARE! HEISHI YO SAKEBE! HEISHI YO TATAKAE!")
+            
             self.reescale_limits()
             self.last_built_nexus = unit
 
