@@ -2,6 +2,7 @@ import sc2
 from sc2 import Difficulty, Race, maps, run_game
 from sc2.player import Bot, Computer
 from sc2.unit import Unit
+from sc2.ids.upgrade_id import UpgradeId
 
 from managers.MilitaryManager import MilitaryManager
 from managers.ResourcesManager import ResourcesManager
@@ -44,6 +45,19 @@ class Scyther(sc2.BotAI):
             except:
                 pass
 
+    async def on_upgrade_complete(self, upgrade: UpgradeId):
+        for manager in self.managers:
+            try:
+                await manager.on_upgrade_complete(upgrade)
+            except:
+                pass
+
+    async def on_unit_created(self, unit: Unit):
+        for manager in self.managers:
+            try:
+                await manager.on_unit_created(unit)
+            except:
+                pass
 
     async def on_unit_destroyed(self, unit_tag: int):
         for manager in self.managers:
@@ -51,7 +65,6 @@ class Scyther(sc2.BotAI):
                 await manager.on_structure_destroyed(unit_tag)
             except:
                 pass
-
 
 run_game(maps.get("AcropolisLE"), [
     Bot(Race.Protoss, Scyther()),

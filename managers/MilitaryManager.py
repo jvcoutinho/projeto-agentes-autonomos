@@ -22,6 +22,11 @@ class MilitaryManager(Manager):
     MAXIMUM_NUMBER_SENTRIES = 1000
     MAXIMUM_NUMBER_OBSERVERS = 2
 
+    DEFFENSE_CHAT_SENT = False
+    ATTACK_CHAT_SENT = False
+    TEMPEST_CHAT_SENT = False
+    DARKSHRINE_CHAT_SENT = False
+    VOIDRAY_CHAT_SENT = False
 
     def __init__(self, agent: sc2.BotAI):
         super().__init__(agent)
@@ -44,7 +49,12 @@ class MilitaryManager(Manager):
         self.train_units_on_structure([UnitTypeId.OBSERVER], UnitTypeId.ROBOTICSFACILITY)
 
         # Combat #
-        self.defend_base()
+        on_deffense = self.defend_base()
+
+        if on_deffense and not self.DEFFENSE_CHAT_SENT:
+            self.DEFFENSE_CHAT_SENT = True
+            await self.agent.chat_send("YOU... SHALL NOT... PASS!")
+
         await self.attack_procedure()
 
 
@@ -71,15 +81,21 @@ class MilitaryManager(Manager):
         """
         If there are enemies too close to a Nexus, then defend if there are enough units nearby.
         """
+        defending = False
+
         for townhall in self.agent.townhalls:
             close_enemies = self.get_enemies().closer_than(15, townhall)
             if not close_enemies.exists:
+                defending |= False
                 continue
 
             close_combatents = self.get_combatents().closer_than(60, townhall)
             if close_combatents.amount >= close_enemies.amount * self.DEFEND_THRESHOLD:
+                defending |= True
                 for combatent in close_combatents:
                     combatent.attack(close_enemies.closest_to(combatent))
+
+        return defending
 
 
     async def attack_procedure(self):
@@ -91,6 +107,10 @@ class MilitaryManager(Manager):
 
         if not self.is_sufficient_amount(combatents.amount):
             return
+
+        if not self.ATTACK_CHAT_SENT:
+            self.ATTACK_CHAT_SENT = True
+            await self.agent.chat_send("LEEROOOOOOOOOOOY JENKINS")
 
         for combatent in combatents:
             if self.is_healthy(combatent):
@@ -158,3 +178,17 @@ class MilitaryManager(Manager):
             return amount >= self.COMBATENTS_PUSH_WITH_VOIDRAY_THRESHOLD
 
         return amount >= self.COMBATENTS_PUSH_WITHOUT_VOIDRAY_THRESHOLD
+
+    async def on_unit_created(self, unit: Unit):
+        if unit.type_id == UnitTypeId.TEMPEST and not self.TEMPEST_CHAT_SENT:
+            self.TEMPEST_CHAT_SENT = True
+            await self.agent.chat_send("Release the KRAKEN!")
+        
+        if unit.type_id == UnitTypeId.DARKTEMPLAR and not self.DARKSHRINE_CHAT_SENT:
+            self.DARKSHRINE_CHAT_SENT = True
+            await self.agent.chat_send("Didn't see that comming?")
+
+        if unit.type_id == UnitTypeId.VOIDRAY and not self.VOIDRAY_CHAT_SENT:
+            self.VOIDRAY_CHAT_SENT = True
+            await self.agent.chat_send("Bring the Cavalry!")
+

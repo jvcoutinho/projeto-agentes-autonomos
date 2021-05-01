@@ -42,7 +42,8 @@ class StructureManager(Manager):
             
             self.reescale_limits()
             self.last_built_nexus = unit
-
+        elif unit.type_id == UnitTypeId.DARKSHRINE:
+            await self.agent.chat_send("We're on the ENDGAME now.")
         # if unit.type_id == UnitTypeId.NEXUS:
         #     self.MAXIMUM_NUMBER_PYLONS += 5
         #     self.MAXIMUM_NUMBER_ASSIMILATORS += 1
@@ -100,6 +101,13 @@ class StructureManager(Manager):
 
     async def on_structure_destroyed(self, unit_tag: int):
         self.reescale_limits()
+
+        nexusesLeft = self.count_with_pending_structure(UnitTypeId.NEXUS)
+
+        if nexusesLeft == 2:
+            await self.agent.chat_send("SHINZOU WO SASAGEYO!!!!")
+        elif nexusesLeft < 1:
+            await self.agent.chat_send("SPARTANS DO NOT SURRENDER!")
 
 
     async def update(self, iteration: int):
@@ -280,6 +288,8 @@ class StructureManager(Manager):
             target_pylon = pylons.random if not pylon else pylon
             await self.agent.build(unit_type_id, near=target_pylon, placement_step=placement_step)
 
+    async def on_upgrade_complete(self, upgrade: UpgradeId):
+        await self.agent.chat_send("This isn't even my final form!")
 
     def count_with_pending_structure(self, unit_type_id) -> int:
         return self.agent.structures(unit_type_id).amount + self.agent.already_pending(unit_type_id)
