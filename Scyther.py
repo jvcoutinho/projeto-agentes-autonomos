@@ -23,22 +23,34 @@ class Scyther(sc2.BotAI):
 
     async def on_start(self):
         for manager in self.managers:
-            await manager.start()
+            try:
+                await manager.start()
+            except AttributeError:
+                pass
 
 
     async def on_step(self, iteration: int):
         for manager in self.managers:
-            await manager.update(iteration)
+            try:
+                await manager.update(iteration)
+            except AttributeError:
+                pass
 
 
     async def on_building_construction_complete(self, unit: Unit):
         for manager in self.managers:
-            await manager.on_structure_built(unit)
+            try:
+                await manager.on_structure_built(unit)
+            except AttributeError:
+                pass
 
 
     async def on_unit_destroyed(self, unit_tag: int):
         for manager in self.managers:
-            await manager.on_structure_destroyed(unit_tag)
+            try:
+                await manager.on_structure_destroyed(unit_tag)
+            except AttributeError:
+                pass
 
 
 run_game(maps.get("AcropolisLE"), [
